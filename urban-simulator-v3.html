@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Urban Simulator AI — Kazakhstan</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --c0: #080c10;--c1: #0e1318;--c2: #151c24;--c3: #1c2530;--c4: #243040;
+  --lime: #b8ff00;--lime-glow: rgba(184,255,0,0.18);
+  --red: #ff4055;--orange: #ff9500;--blue: #3b82f6;--purple: #8b5cf6;
+  --t0: #f0f4f8;--t1: #8da0b0;--t2: #3d5060;
+  --border: rgba(255,255,255,0.06);--border2: rgba(255,255,255,0.12);--border3: rgba(184,255,0,0.25);
+  --sans:'Outfit',sans-serif;--body:'Space Grotesk',sans-serif;
+  --radius:14px;--radius-sm:8px;--shadow:0 4px 24px rgba(0,0,0,0.4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:var(--body);background:var(--c0);color:var(--t0);min-height:100vh;overflow-x:hidden}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");pointer-events:none;z-index:9998;opacity:0.35}
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:54px;background:rgba(8,12,16,0.97);border-bottom:1px solid var(--border2);position:sticky;top:0;z-index:500;backdrop-filter:blur(24px);gap:8px}
+.logo{display:flex;align-items:center;gap:9px;font-family:var(--sans);font-weight:900;font-size:15px;letter-spacing:-0.02em;flex-shrink:0}
+.logo-mark{width:28px;height:28px;background:var(--lime);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;color:#000;font-weight:900;box-shadow:0 0 14px rgba(184,255,0,0.4)}
+.logo em{color:var(--lime);font-style:normal}
+.logo sub{font-size:7px;color:var(--t2);font-family:var(--body);font-weight:400;display:block;letter-spacing:0.12em;margin-top:-2px;text-transform:uppercase}
+.nav-pills{display:flex;gap:2px;background:var(--c2);border:1px solid var(--border);border-radius:9px;padding:3px}
+.nav-pill{padding:5px 14px;border-radius:6px;cursor:pointer;font-size:10px;font-weight:700;border:none;color:var(--t2);transition:all 0.18s;background:none;font-family:var(--sans);letter-spacing:0.06em;text-transform:uppercase;white-space:nowrap}
+.nav-pill:hover{color:var(--t1)}
+.nav-pill.active{background:var(--lime);color:#000;box-shadow:0 2px 10px rgba(184,255,0,0.3)}
+.header-right{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.lang-btn{padding:4px 9px;border-radius:6px;cursor:pointer;font-size:9px;font-weight:800;border:1px solid var(--border);background:transparent;color:var(--t2);transition:all 0.15s;font-family:var(--sans);letter-spacing:0.1em}
+.lang-btn:hover{color:var(--t1);border-color:var(--border2)}
+.lang-btn.active{background:var(--c3);color:var(--t0);border-color:var(--border3)}
+.live-tag{display:flex;align-items:center;gap:5px;background:rgba(184,255,0,0.07);border:1px solid rgba(184,255,0,0.18);border-radius:20px;padding:4px 10px;font-size:9px;font-weight:800;color:var(--lime);font-family:var(--sans);letter-spacing:0.12em}
+.live-dot{width:5px;height:5px;border-radius:50%;background:var(--lime);animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
+.menu-btn{display:none;width:34px;height:34px;border-radius:7px;border:1px solid var(--border2);background:var(--c2);color:var(--t0);cursor:pointer;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+/* LAYOUT */
+main{display:flex;height:calc(100vh - 54px);overflow:hidden}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:300;backdrop-filter:blur(4px)}
+.sidebar{width:236px;flex-shrink:0;background:var(--c1);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;padding:14px 11px;transition:transform 0.3s ease}
+.sidebar::-webkit-scrollbar{width:3px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--c4);border-radius:3px}
+.sb-section{margin-bottom:18px}
+.sb-label{font-size:8px;font-weight:800;letter-spacing:0.2em;text-transform:uppercase;color:var(--t2);padding:0 5px;margin-bottom:5px;font-family:var(--sans)}
+.city-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer;border:1px solid transparent;transition:all 0.15s;margin-bottom:3px;font-weight:600;font-size:12px;color:var(--t1)}
+.city-item:hover{background:var(--c2);color:var(--t0)}
+.city-item.active{background:var(--c3);border-color:var(--border2);color:var(--t0)}
+.city-item .city-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.city-count{margin-left:auto;font-size:9px;color:var(--t2);background:var(--c3);padding:2px 5px;border-radius:4px}
+.dist-item{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:6px;cursor:pointer;transition:all 0.15s;margin-bottom:2px;font-size:11px;color:var(--t2);border-left:2px solid transparent}
+.dist-item:hover{background:var(--c2);color:var(--t1);border-left-color:var(--c4)}
+.dist-item.active{background:rgba(184,255,0,0.06);color:var(--lime);border-left-color:var(--lime);font-weight:600}
+.dist-score{margin-left:auto;font-size:9px;font-weight:800;font-family:var(--sans);padding:2px 5px;border-radius:4px}
+.dist-score.good{background:rgba(184,255,0,0.12);color:var(--lime)}
+.dist-score.mid{background:rgba(255,149,0,0.12);color:var(--orange)}
+.dist-score.bad{background:rgba(255,64,85,0.12);color:var(--red)}
+.sb-footer{margin-top:auto;padding-top:14px;border-top:1px solid var(--border)}
+.sb-support{margin-top:10px;padding:10px 11px;background:var(--c2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;text-decoration:none;display:block;transition:border-color 0.2s}
+.sb-support:hover{border-color:var(--border3)}
+.sb-support-label{font-size:7px;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--t2);font-family:var(--sans);margin-bottom:3px}
+.sb-support-text{font-size:10px;color:var(--t1);line-height:1.4}
+.sb-support-mail{font-size:9px;color:var(--lime);font-family:var(--sans);margin-top:3px;opacity:0.8}
+/* CONTENT */
+.content{flex:1;overflow-y:auto;background:var(--c0);overflow-x:hidden}
+.content::-webkit-scrollbar{width:4px}
+.content::-webkit-scrollbar-thumb{background:var(--c3);border-radius:4px}
+.tab-panel{display:none}
+.tab-panel.active{display:block;animation:fadeSlide 0.22s ease}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.cp{padding:18px 22px}
+/* HERO */
+.district-hero{background:var(--c1);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;gap:12px}
+.district-hero::before{content:'';position:absolute;top:-70px;right:-70px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(184,255,0,0.06),transparent 70%);pointer-events:none}
+.district-hero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(184,255,0,0.18),transparent)}
+.hero-tag{display:inline-flex;align-items:center;gap:5px;font-size:8px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:var(--lime);background:rgba(184,255,0,0.07);border:1px solid rgba(184,255,0,0.18);padding:3px 9px;border-radius:20px;margin-bottom:7px;font-family:var(--sans)}
+.hero-name{font-family:var(--sans);font-size:28px;font-weight:900;line-height:1;letter-spacing:-0.03em;margin-bottom:3px}
+.hero-city{font-size:11px;color:var(--t2)}
+.hero-right{display:flex;gap:20px;align-items:center;flex-shrink:0}
+.hero-stat{text-align:center}
+.hero-stat-val{font-family:var(--sans);font-size:24px;font-weight:900;line-height:1;letter-spacing:-0.02em}
+.hero-stat-lbl{font-size:8px;color:var(--t2);margin-top:2px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase}
+.hero-change{font-size:9px;font-weight:700;margin-top:2px;font-family:var(--sans)}
+.hero-change.up{color:var(--red)}.hero-change.dn{color:var(--lime)}.hero-change.neu{color:var(--t2)}
+.hero-divider{width:1px;height:42px;background:var(--border2)}
+/* METRIC CARDS */
+.cards-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:16px}
+.mcard{background:var(--c1);border:1px solid var(--border);border-radius:var(--radius);padding:15px;position:relative;overflow:hidden;cursor:default;transition:border-color 0.2s,transform 0.2s,box-shadow 0.2s}
+.mcard:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:var(--shadow)}
+.mcard-accent{position:absolute;bottom:0;left:0;right:0;height:2px;border-radius:0 0 2px 2px}
+.mcard-label{font-size:8px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:var(--t2);margin-bottom:9px;font-family:var(--sans)}
+.mcard-val{font-family:var(--sans);font-size:32px;font-weight:900;line-height:1;letter-spacing:-0.03em}
+.mcard-unit{font-size:11px;font-weight:400;color:var(--t2);margin-left:2px}
+.mcard-bar{height:2px;background:var(--c3);border-radius:2px;margin-top:11px;overflow:hidden}
+.mcard-fill{height:100%;border-radius:2px;transition:width 0.9s cubic-bezier(.4,0,.2,1)}
+.mcard-sub{font-size:10px;color:var(--t2);margin-top:6px;display:flex;align-items:center;gap:5px}
+.mcard-delta{font-size:9px;font-weight:800;font-family:var(--sans);padding:1px 5px;border-radius:4px}
+.mcard-delta.up{background:rgba(255,64,85,0.12);color:var(--red)}
+.mcard-delta.dn{background:rgba(184,255,0,0.12);color:var(--lime)}
+.mcard-delta.neu{background:var(--c3);color:var(--t2)}
+/* AI */
+.ai-section{background:var(--c1);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;overflow:hidden}
+.ai-section-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:rgba(184,255,0,0.02)}
+.ai-section-title{display:flex;align-items:center;gap:8px;font-family:var(--sans);font-weight:700;font-size:12px}
+.ai-chip{font-size:7px;font-weight:900;letter-spacing:0.15em;text-transform:uppercase;background:var(--lime);color:#000;padding:3px 6px;border-radius:4px;font-family:var(--sans)}
+.ai-body{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.insight-row{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;border-radius:var(--radius-sm);background:var(--c2);font-size:11px;line-height:1.6;color:var(--t1);border-left:2px solid transparent}
+.insight-row.sev-high{border-left-color:var(--red)}.insight-row.sev-med{border-left-color:var(--orange)}.insight-row.sev-low{border-left-color:var(--lime)}
+.sev-icon{font-size:13px;flex-shrink:0;margin-top:1px}
+.ai-rec{margin:0 14px 12px;padding:11px 13px;background:rgba(184,255,0,0.04);border:1px solid rgba(184,255,0,0.12);border-radius:var(--radius-sm);font-size:11px;color:var(--t1);line-height:1.6}
+.ai-rec strong{display:block;font-size:7px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--lime);margin-bottom:4px;font-family:var(--sans)}
+/* CHARTS */
+.charts-bento{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:16px}
+.chart-card{background:var(--c1);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.chart-card.wide{grid-column:span 2}
+.chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+.chart-title{font-size:8px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--t2);font-family:var(--sans)}
+.chart-pill{font-size:8px;font-weight:700;color:var(--lime);background:rgba(184,255,0,0.07);padding:2px 7px;border-radius:4px;font-family:var(--sans);border:1px solid rgba(184,255,0,0.14)}
+/* MAP */
+.map-layout{display:grid;grid-template-columns:1fr 256px;gap:0;height:100%}
+#map-wrap{position:relative;height:calc(100vh - 54px)}
+#map{height:100%;width:100%}
+.map-panel{background:var(--c1);border-left:1px solid var(--border);overflow-y:auto;padding:14px 13px}
+.map-panel::-webkit-scrollbar{width:3px}
+.map-panel::-webkit-scrollbar-thumb{background:var(--c4);border-radius:3px}
+.map-panel-title{font-family:var(--sans);font-weight:800;font-size:12px;margin-bottom:12px;color:var(--t0)}
+.map-metric{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;background:var(--c2);border-radius:var(--radius-sm);margin-bottom:5px;border:1px solid var(--border)}
+.map-metric-lbl{font-size:10px;color:var(--t1)}
+.map-metric-val{font-family:var(--sans);font-size:15px;font-weight:900}
+.map-metric-val.r{color:var(--red)}.map-metric-val.o{color:var(--orange)}.map-metric-val.g{color:var(--lime)}
+.map-metric-change{font-size:8px;font-weight:800;font-family:var(--sans)}
+.map-metric-change.up{color:var(--red)}.map-metric-change.dn{color:var(--lime)}.map-metric-change.neu{color:var(--t2)}
+.map-dist-list{margin-top:14px}
+.map-dist-item{display:flex;align-items:center;gap:7px;padding:8px 9px;border-radius:var(--radius-sm);border:1px solid transparent;cursor:pointer;margin-bottom:4px;transition:all 0.15s}
+.map-dist-item:hover{background:var(--c2)}
+.map-dist-item.active{background:rgba(184,255,0,0.05);border-color:rgba(184,255,0,0.18)}
+.map-dist-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.map-dist-name{font-size:11px;font-weight:600;flex:1}
+.map-dist-safe{font-size:9px;font-weight:800;font-family:var(--sans)}
+.map-legend{margin-top:14px;padding:10px;background:var(--c2);border-radius:var(--radius-sm);border:1px solid var(--border)}
+.legend-row{display:flex;align-items:center;gap:7px;margin:4px 0;font-size:10px;color:var(--t1)}
+.legend-swatch{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+/* Leaflet */
+.leaflet-tile{filter:brightness(0.4) contrast(1.15) saturate(0.25) hue-rotate(5deg) !important}
+.leaflet-container{background:#080c10 !important}
+.leaflet-control-zoom a{background:var(--c2)!important;color:var(--t0)!important;border-color:var(--border2)!important}
+.leaflet-control-zoom a:hover{background:var(--c3)!important}
+.leaflet-popup-content-wrapper{background:var(--c2)!important;color:var(--t0)!important;border:1px solid var(--border3);box-shadow:var(--shadow)!important;border-radius:10px!important}
+.leaflet-popup-tip{background:var(--c2)!important}
+.leaflet-popup-content{font-family:var(--body)!important;font-size:12px!important;line-height:1.7!important;min-width:130px}
+.leaflet-popup-content b{color:var(--lime);font-family:var(--sans)}
+.dist-tooltip{background:rgba(8,12,16,0.92)!important;border:1px solid var(--border3)!important;color:var(--t0)!important;font-family:var(--body)!important;font-size:11px!important;padding:5px 9px!important;border-radius:7px!important;box-shadow:var(--shadow)!important;white-space:nowrap}
+/* SUPPORT MODAL */
+.support-modal{display:none;position:fixed;inset:0;z-index:1000;align-items:center;justify-content:center;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px)}
+.support-modal.open{display:flex}
+.support-box{background:var(--c1);border:1px solid var(--border2);border-radius:var(--radius);padding:26px;max-width:400px;width:90%;position:relative;box-shadow:0 24px 80px rgba(0,0,0,0.6)}
+.support-box h2{font-family:var(--sans);font-size:19px;font-weight:900;margin-bottom:6px}
+.support-box p{font-size:12px;color:var(--t1);line-height:1.7;margin-bottom:14px}
+.support-mail-btn{display:flex;align-items:center;gap:9px;padding:11px 14px;background:rgba(184,255,0,0.07);border:1px solid rgba(184,255,0,0.24);border-radius:var(--radius-sm);text-decoration:none;color:var(--lime);font-family:var(--sans);font-size:12px;font-weight:700;transition:all 0.2s;margin-bottom:10px}
+.support-mail-btn:hover{background:rgba(184,255,0,0.12)}
+.support-close{position:absolute;top:14px;right:14px;width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--c2);color:var(--t1);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
+.support-close:hover{color:var(--t0)}
+.support-note{font-size:10px;color:var(--t2);line-height:1.5}
+/* FLASH */
+@keyframes flashLime{0%{border-color:rgba(184,255,0,0.45)}100%{border-color:var(--border)}}
+.flash{animation:flashLime 0.65s ease}
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--c3);border-radius:4px}
+/* RESPONSIVE */
+@media(max-width:768px){
+  header{padding:0 10px;height:50px}
+  main{height:calc(100vh - 50px)}
+  .logo sub,.live-tag{display:none}
+  .menu-btn{display:flex}
+  .nav-pill{padding:4px 9px;font-size:9px}
+  .sidebar{position:fixed;left:0;top:50px;bottom:0;z-index:400;transform:translateX(-100%);box-shadow:4px 0 24px rgba(0,0,0,0.5)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-overlay.active{display:block}
+  .content{width:100vw}
+  .cp{padding:12px 13px}
+  .district-hero{flex-direction:column;align-items:flex-start;padding:14px 16px}
+  .hero-right{gap:14px}
+  .hero-name{font-size:22px}
+  .hero-divider{display:none}
+  .cards-grid{grid-template-columns:1fr 1fr;gap:7px}
+  .mcard-val{font-size:26px}
+  .charts-bento{grid-template-columns:1fr}
+  .chart-card.wide{grid-column:span 1}
+  .map-layout{grid-template-columns:1fr;grid-template-rows:55vh auto;height:auto}
+  #map-wrap{height:55vh}
+  .map-panel{border-left:none;border-top:1px solid var(--border);max-height:45vh}
+}
+@media(min-width:769px) and (max-width:1100px){
+  .sidebar{width:196px}
+  .cards-grid{grid-template-columns:1fr 1fr}
+  .cp{padding:14px 18px}
+}
+</style>
+</head>
+<body>
+
+<!-- SUPPORT MODAL -->
+<div class="support-modal" id="support-modal">
+  <div class="support-box">
+    <button class="support-close" onclick="closeSupportModal()">✕</button>
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:11px">
+      <div style="width:30px;height:30px;background:var(--lime);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">🛟</div>
+      <h2 id="sup-title">Support Center</h2>
+    </div>
+    <p id="sup-desc">Encountered an issue or have a suggestion? Write to us — we'll respond as soon as possible.</p>
+    <a href="mailto:urbansimulatorai@gmail.com" class="support-mail-btn">
+      <span>✉</span><span>urbansimulatorai@gmail.com</span>
+    </a>
+    <div class="support-note" id="sup-note">Response time: 24–48 hours on business days. Describe the problem in detail so we can help faster.</div>
+  </div>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<!-- HEADER -->
+<header>
+  <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+  <div class="logo">
+    <div class="logo-mark">U</div>
+    <div>Urban<em>AI</em><sub id="logo-sub">Kazakhstan Smart City Platform</sub></div>
+  </div>
+  <nav class="nav-pills">
+    <button class="nav-pill active" onclick="switchTab('dashboard')" id="tab-dashboard" data-i="tab_dash"></button>
+    <button class="nav-pill" onclick="switchTab('analytics')" id="tab-analytics" data-i="tab_an"></button>
+    <button class="nav-pill" onclick="switchTab('map')" id="tab-map" data-i="tab_map"></button>
+  </nav>
+  <div class="header-right">
+    <div class="live-tag"><div class="live-dot"></div><span data-i="live">LIVE</span></div>
+    <button class="lang-btn active" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('kk')">KK</button>
+    <button class="lang-btn" onclick="setLang('ru')">RU</button>
+    <button class="lang-btn" onclick="openSupportModal()" style="border-color:rgba(184,255,0,0.18);color:var(--t1)">?</button>
+  </div>
+</header>
+
+<main>
+<aside class="sidebar" id="sidebar">
+  <div class="sb-section">
+    <div class="sb-label" data-i="sb_cities">Cities</div>
+    <div id="city-list"></div>
+  </div>
+  <div class="sb-section">
+    <div class="sb-label" data-i="sb_districts">Districts</div>
+    <div id="district-list"></div>
+  </div>
+  <div class="sb-footer">
+    <div style="font-size:8px;color:var(--t2);letter-spacing:0.1em;text-transform:uppercase;font-family:var(--sans);margin-bottom:3px" data-i="last_upd">Last Updated</div>
+    <div id="upd-time" style="font-size:10px;color:var(--t1);font-family:var(--sans)">—</div>
+    <a class="sb-support" onclick="openSupportModal();return false" href="#">
+      <div class="sb-support-label" data-i="support">Support</div>
+      <div class="sb-support-text" data-i="sup_short">Report a problem or send feedback</div>
+      <div class="sb-support-mail">urbansimulatorai@gmail.com</div>
+    </a>
+  </div>
+</aside>
+
+<div class="content">
+  <!-- DASHBOARD -->
+  <div class="tab-panel active" id="panel-dashboard">
+    <div class="cp">
+      <div class="district-hero" id="hero-card">
+        <div class="hero-left">
+          <div class="hero-tag"><span>⬡</span><span data-i="district_tag">District Report</span></div>
+          <div class="hero-name" id="hero-name">—</div>
+          <div class="hero-city" id="hero-city">—</div>
+        </div>
+        <div class="hero-right">
+          <div class="hero-stat">
+            <div class="hero-stat-val" id="hero-safety" style="color:var(--lime)">—</div>
+            <div class="hero-stat-lbl" data-i="safety">Safety</div>
+            <div class="hero-change" id="hero-safety-ch">—</div>
+          </div>
+          <div class="hero-divider"></div>
+          <div class="hero-stat">
+            <div class="hero-stat-val" id="hero-traffic" style="color:var(--orange)">—</div>
+            <div class="hero-stat-lbl" data-i="traffic">Traffic</div>
+            <div class="hero-change" id="hero-traffic-ch">—</div>
+          </div>
+          <div class="hero-divider"></div>
+          <div class="hero-stat">
+            <div class="hero-stat-val" id="hero-pollution" style="color:var(--red)">—</div>
+            <div class="hero-stat-lbl" data-i="pollution">Pollution</div>
+            <div class="hero-change" id="hero-pollution-ch">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="cards-grid">
+        <div class="mcard">
+          <div class="mcard-accent" style="background:linear-gradient(90deg,var(--orange),var(--red))"></div>
+          <div class="mcard-label" data-i="traffic">Traffic Index</div>
+          <div><span class="mcard-val" id="mv-traffic" style="color:var(--orange)">—</span><span class="mcard-unit">/100</span></div>
+          <div class="mcard-bar"><div class="mcard-fill" id="mb-traffic" style="background:linear-gradient(90deg,var(--orange),var(--red))"></div></div>
+          <div class="mcard-sub"><span id="ms-traffic">—</span><span class="mcard-delta" id="md-traffic">—</span></div>
+        </div>
+        <div class="mcard">
+          <div class="mcard-accent" style="background:linear-gradient(90deg,var(--purple),var(--red))"></div>
+          <div class="mcard-label" data-i="pollution">Pollution AQI</div>
+          <div><span class="mcard-val" id="mv-pollution" style="color:var(--purple)">—</span><span class="mcard-unit">/200</span></div>
+          <div class="mcard-bar"><div class="mcard-fill" id="mb-pollution" style="background:linear-gradient(90deg,var(--purple),var(--red))"></div></div>
+          <div class="mcard-sub"><span id="ms-pollution">—</span><span class="mcard-delta" id="md-pollution">—</span></div>
+        </div>
+        <div class="mcard">
+          <div class="mcard-accent" style="background:linear-gradient(90deg,var(--lime),#66ff88)"></div>
+          <div class="mcard-label" data-i="safety">Safety Score</div>
+          <div><span class="mcard-val" id="mv-safety" style="color:var(--lime)">—</span><span class="mcard-unit">/100</span></div>
+          <div class="mcard-bar"><div class="mcard-fill" id="mb-safety" style="background:linear-gradient(90deg,var(--lime),#66ff88)"></div></div>
+          <div class="mcard-sub"><span id="ms-safety">—</span><span class="mcard-delta" id="md-safety">—</span></div>
+        </div>
+        <div class="mcard">
+          <div class="mcard-accent" style="background:linear-gradient(90deg,var(--blue),var(--purple))"></div>
+          <div class="mcard-label" data-i="population">Population</div>
+          <div><span class="mcard-val" id="mv-pop" style="color:var(--blue)">—</span></div>
+          <div class="mcard-bar"><div class="mcard-fill" id="mb-pop" style="background:linear-gradient(90deg,var(--blue),var(--purple))"></div></div>
+          <div class="mcard-sub"><span id="ms-pop">—</span><span class="mcard-delta neu" id="md-pop"></span></div>
+        </div>
+      </div>
+      <div class="ai-section">
+        <div class="ai-section-header">
+          <div class="ai-section-title">
+            <div class="ai-chip">AI</div>
+            <span data-i="ai_title">District Intelligence Report</span>
+          </div>
+          <div style="font-size:9px;color:var(--t2);font-family:var(--sans)">ENGINE v3.2</div>
+        </div>
+        <div class="ai-body" id="ai-insights"></div>
+        <div class="ai-rec" id="ai-rec"><strong data-i="recommendation">Recommendation</strong><span id="ai-rec-text">—</span></div>
+      </div>
+      <div class="charts-bento">
+        <div class="chart-card">
+          <div class="chart-head">
+            <span class="chart-title" data-i="chart_bar">Metrics Overview</span>
+            <span class="chart-pill" id="dash-district-pill">—</span>
+          </div>
+          <div style="height:165px"><canvas id="d-bar"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-head"><span class="chart-title" data-i="chart_donut">Score Breakdown</span></div>
+          <div style="height:165px"><canvas id="d-donut"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYTICS -->
+  <div class="tab-panel" id="panel-analytics">
+    <div class="cp">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:16px">
+        <div class="mcard"><div class="mcard-label" data-i="traffic">Traffic</div><div class="mcard-val" id="an-t" style="color:var(--orange)">—</div></div>
+        <div class="mcard"><div class="mcard-label" data-i="pollution">Pollution</div><div class="mcard-val" id="an-p" style="color:var(--purple)">—</div></div>
+        <div class="mcard"><div class="mcard-label" data-i="safety">Safety</div><div class="mcard-val" id="an-s" style="color:var(--lime)">—</div></div>
+        <div class="mcard"><div class="mcard-label" data-i="population">Population</div><div class="mcard-val" id="an-pop" style="color:var(--blue)">—</div></div>
+      </div>
+      <div class="charts-bento">
+        <div class="chart-card wide">
+          <div class="chart-head">
+            <span class="chart-title" data-i="an_bar">All Districts Comparison</span>
+            <span class="chart-pill" id="an-city-pill">—</span>
+          </div>
+          <div style="height:220px"><canvas id="an-bar"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-head"><span class="chart-title" data-i="an_line">24h Trend</span></div>
+          <div style="height:195px"><canvas id="an-line"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-head"><span class="chart-title" data-i="an_radar">Radar Analysis</span></div>
+          <div style="height:195px"><canvas id="an-radar"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div class="tab-panel" id="panel-map">
+    <div class="map-layout">
+      <div id="map-wrap"><div id="map"></div></div>
+      <div class="map-panel">
+        <div class="map-panel-title" data-i="map_stats">District Stats</div>
+        <div class="map-metric">
+          <span class="map-metric-lbl" data-i="traffic">Traffic</span>
+          <div style="text-align:right"><div class="map-metric-val" id="mm-t">—</div><div class="map-metric-change" id="mm-tc">—</div></div>
+        </div>
+        <div class="map-metric">
+          <span class="map-metric-lbl" data-i="pollution">Pollution</span>
+          <div style="text-align:right"><div class="map-metric-val" id="mm-p">—</div><div class="map-metric-change" id="mm-pc">—</div></div>
+        </div>
+        <div class="map-metric">
+          <span class="map-metric-lbl" data-i="safety">Safety</span>
+          <div style="text-align:right"><div class="map-metric-val" id="mm-s">—</div><div class="map-metric-change" id="mm-sc">—</div></div>
+        </div>
+        <div class="map-dist-list">
+          <div style="font-size:8px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:var(--t2);margin-bottom:6px;font-family:var(--sans)" data-i="sb_districts">Districts</div>
+          <div id="map-dist-list"></div>
+        </div>
+        <div class="map-legend">
+          <div style="font-size:8px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:var(--t2);margin-bottom:6px;font-family:var(--sans)" data-i="legend">Legend</div>
+          <div class="legend-row"><div class="legend-swatch" style="background:var(--red)"></div><span data-i="leg_danger">High risk</span></div>
+          <div class="legend-row"><div class="legend-swatch" style="background:var(--orange)"></div><span data-i="leg_medium">Medium risk</span></div>
+          <div class="legend-row"><div class="legend-swatch" style="background:var(--lime)"></div><span data-i="leg_safe">Safe zone</span></div>
+        </div>
+        <div style="margin-top:12px">
+          <a onclick="openSupportModal();return false" href="#" style="display:flex;align-items:center;gap:6px;padding:9px 10px;background:var(--c2);border:1px solid var(--border);border-radius:var(--radius-sm);text-decoration:none;color:var(--t1);font-size:10px;transition:border-color 0.2s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='var(--border)'">
+            <span>🛟</span><span data-i="support">Support</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</main>
+
+<script>
+// DATA
+const DATA = {
+  Almaty:{
+    center:[43.238,76.889],zoom:11,color:'#3b82f6',
+    districts:{
+      'Алатауский':    {lat:43.318,lng:76.822,traffic:58,pollution:145,pop:310000},
+      'Алмалинский':   {lat:43.258,lng:76.940,traffic:82,pollution:110,pop:185000},
+      'Ауэзовский':    {lat:43.248,lng:76.833,traffic:74,pollution:138,pop:390000},
+      'Бостандыкский': {lat:43.267,lng:76.985,traffic:65,pollution:90, pop:285000},
+      'Жетысуский':    {lat:43.280,lng:77.020,traffic:70,pollution:105,pop:240000},
+      'Медеуский':     {lat:43.218,lng:76.945,traffic:88,pollution:72, pop:142000},
+      'Наурызбайский': {lat:43.200,lng:76.770,traffic:55,pollution:120,pop:195000},
+      'Турксибский':   {lat:43.310,lng:77.010,traffic:76,pollution:130,pop:330000},
+    }
+  },
+  Astana:{
+    center:[51.128,71.430],zoom:11,color:'#b8ff00',
+    districts:{
+      'Алматинский':   {lat:51.135,lng:71.370,traffic:83,pollution:128,pop:310000},
+      'Байконур':      {lat:51.155,lng:71.490,traffic:60,pollution:88, pop:185000},
+      'Есильский':     {lat:51.093,lng:71.460,traffic:42,pollution:62, pop:190000},
+      'Сарыаркинский': {lat:51.180,lng:71.418,traffic:75,pollution:108,pop:245000},
+      'Нура':          {lat:51.060,lng:71.440,traffic:50,pollution:75, pop:155000},
+      'Сарайшык':      {lat:51.210,lng:71.380,traffic:38,pollution:55, pop:120000},
+    }
+  },
+  Shymkent:{
+    center:[42.317,69.596],zoom:11,color:'#ff9500',
+    districts:{
+      'Абайский':      {lat:42.335,lng:69.640,traffic:68,pollution:98, pop:195000},
+      'Аль-Фараби':    {lat:42.300,lng:69.610,traffic:55,pollution:80, pop:165000},
+      'Енбекшинский':  {lat:42.355,lng:69.580,traffic:50,pollution:72, pop:160000},
+      'Каратауский':   {lat:42.290,lng:69.560,traffic:90,pollution:158,pop:280000},
+      'Туранский':     {lat:42.330,lng:69.500,traffic:62,pollution:90, pop:175000},
+    }
+  }
+};
+
+// TRANSLATIONS
+const T = {
+  en:{
+    live:'LIVE',tab_dash:'Dashboard',tab_an:'Analytics',tab_map:'Map',
+    sb_cities:'Cities',sb_districts:'Districts',last_upd:'Last Updated',
+    district_tag:'District Report',safety:'Safety',traffic:'Traffic',pollution:'Pollution',
+    population:'Population',ai_title:'District Intelligence Report',recommendation:'AI Recommendation',
+    chart_bar:'Metrics Overview',chart_donut:'Score Breakdown',
+    an_bar:'All Districts Comparison',an_line:'24h Trend',an_radar:'Radar Analysis',
+    map_stats:'District Stats',legend:'Legend',
+    leg_danger:'High risk',leg_medium:'Medium risk',leg_safe:'Safe zone',
+    logo_sub:'Kazakhstan Smart City Platform',
+    sev_high:'Critical',sev_med:'Warning',sev_low:'Normal',
+    vs_hour:'vs last hour',
+    support:'Support',sup_title:'Support Center',sup_short:'Report a problem or send feedback',
+    sup_desc:"Encountered an issue or have a suggestion? Write to us — we'll respond as soon as possible.",
+    sup_note:'Response time: 24–48 hours on business days. Describe the problem in detail so we can help faster.',
+    insight_high_traffic:d=>`High congestion detected in ${d}. Heavy vehicle flow exceeds safe limits.`,
+    insight_med_traffic: d=>`Moderate traffic in ${d}. Monitor peak hours 08:00–10:00 and 17:00–19:00.`,
+    insight_low_traffic: d=>`Normal traffic flow in ${d}. Roads operating within safe capacity.`,
+    insight_high_poll:   d=>`Critical air pollution in ${d}. AQI exceeds 150 — health hazard for all residents.`,
+    insight_med_poll:    d=>`Elevated pollution in ${d}. Sensitive groups should limit outdoor exposure.`,
+    insight_safe:        d=>`Safe conditions confirmed in ${d}. All metrics within normal operating range.`,
+    rec_high_both:       d=>`Deploy emergency traffic control and air quality sensors in ${d}. Restrict heavy vehicle access during peak hours.`,
+    rec_high_traffic:    d=>`Activate alternate routing and expand public transit capacity in ${d}.`,
+    rec_high_poll:       d=>`Issue air quality advisory for ${d}. Consider temporary vehicle restrictions.`,
+    rec_normal:          d=>`Maintain current management policies in ${d}. Conditions are stable — continue routine monitoring.`,
+    pop_format:n=>n>=1000000?`${(n/1e6).toFixed(1)}M`:n>=1000?`${Math.round(n/1000)}K`:`${n}`,
+    trend_up:'+',trend_dn:'-',
+  },
+  kk:{
+    live:'ТІКЕЛЕЙ',tab_dash:'Бақылау',tab_an:'Аналитика',tab_map:'Карта',
+    sb_cities:'Қалалар',sb_districts:'Аудандар',last_upd:'Соңғы жаңарту',
+    district_tag:'Аудан Есебі',safety:'Қауіпсіздік',traffic:'Жол қозғалысы',pollution:'Ластану',
+    population:'Халық',ai_title:'AI Аудан Есебі',recommendation:'AI Ұсынысы',
+    chart_bar:'Көрсеткіштер',chart_donut:'Үлестіру',
+    an_bar:'Барлық аудандар',an_line:'24 сағаттық үрдіс',an_radar:'Радар талдауы',
+    map_stats:'Аудан статистикасы',legend:'Аңыз',
+    leg_danger:'Жоғары қауіп',leg_medium:'Орташа қауіп',leg_safe:'Қауіпсіз',
+    logo_sub:'Қазақстан Smart City Платформасы',
+    sev_high:'Критикалық',sev_med:'Ескерту',sev_low:'Қалыпты',
+    vs_hour:'өткен сағатпен',
+    support:'Қолдау',sup_title:'Қолдау орталығы',sup_short:'Мәселе туралы хабарлаңыз немесе пікір жіберіңіз',
+    sup_desc:'Мәселе туындады немесе ұсыныс бар ма? Бізге жазыңыз — мүмкіндігінше тез жауап береміз.',
+    sup_note:'Жауап беру мерзімі: жұмыс күндері 24–48 сағат. Мәселені егжей-тегжейлі сипаттаңыз.',
+    insight_high_traffic:d=>`${d} ауданында жоғары тығыздалу анықталды. Ауыр көліктер нормадан асып кетті.`,
+    insight_med_traffic: d=>`${d} ауданында орташа жол қозғалысы. 08:00–10:00 және 17:00–19:00 бақылаңыз.`,
+    insight_low_traffic: d=>`${d} ауданында қалыпты жол қозғалысы. Жолдар қауіпсіз шегінде жұмыс істеп тұр.`,
+    insight_high_poll:   d=>`${d} ауданында ауа ластануы критикалық. AQI 150-ден асты — денсаулыққа қауіпті.`,
+    insight_med_poll:    d=>`${d} ауданында ластану жоғарылаған. Сезімтал топтар сыртқа шықпауы керек.`,
+    insight_safe:        d=>`${d} ауданында қауіпсіз жағдайлар расталды. Барлық көрсеткіштер қалыпты.`,
+    rec_high_both:       d=>`${d} ауданында жедел жол бақылауын және ауа сапасы датчиктерін орнатыңыз.`,
+    rec_high_traffic:    d=>`${d} ауданында балама маршруттарды белсендіріп, қоғамдық көлікті кеңейтіңіз.`,
+    rec_high_poll:       d=>`${d} ауданы үшін ауа сапасы ескертуін беріңіз. Уақытша көлік шектеуін қарастырыңыз.`,
+    rec_normal:          d=>`${d} ауданының ағымдағы саясатын сақтаңыз. Жағдай тұрақты — бақылауды жалғастырыңыз.`,
+    pop_format:n=>n>=1000000?`${(n/1e6).toFixed(1)}М`:n>=1000?`${Math.round(n/1000)}мың`:`${n}`,
+    trend_up:'+',trend_dn:'-',
+  },
+  ru:{
+    live:'ПРЯМОЙ ЭФИР',tab_dash:'Дашборд',tab_an:'Аналитика',tab_map:'Карта',
+    sb_cities:'Города',sb_districts:'Районы',last_upd:'Последнее обновление',
+    district_tag:'Отчёт по Району',safety:'Безопасность',traffic:'Трафик',pollution:'Загрязнение',
+    population:'Население',ai_title:'AI Аналитика Района',recommendation:'Рекомендация AI',
+    chart_bar:'Обзор метрик',chart_donut:'Разбивка',
+    an_bar:'Все районы',an_line:'Тренд за 24ч',an_radar:'Радар анализ',
+    map_stats:'Статистика района',legend:'Легенда',
+    leg_danger:'Высокий риск',leg_medium:'Средний риск',leg_safe:'Безопасная зона',
+    logo_sub:'Платформа умного города Казахстана',
+    sev_high:'Критично',sev_med:'Предупреждение',sev_low:'Норма',
+    vs_hour:'за последний час',
+    support:'Поддержка',sup_title:'Центр поддержки',sup_short:'Сообщить о проблеме или отправить отзыв',
+    sup_desc:'Возникла проблема или есть предложение? Напишите нам — ответим как можно скорее.',
+    sup_note:'Время ответа: 24–48 часов в рабочие дни. Опишите проблему подробно, чтобы мы могли помочь быстрее.',
+    insight_high_traffic:d=>`Высокая загруженность в ${d}. Поток тяжёлых транспортных средств превышает норму.`,
+    insight_med_traffic: d=>`Умеренный трафик в ${d}. Следите за часами пик 08:00–10:00 и 17:00–19:00.`,
+    insight_low_traffic: d=>`Нормальный транспортный поток в ${d}. Дороги работают в безопасном режиме.`,
+    insight_high_poll:   d=>`Критическое загрязнение воздуха в ${d}. AQI превышает 150 — опасно для здоровья.`,
+    insight_med_poll:    d=>`Повышенное загрязнение в ${d}. Уязвимым группам рекомендуется ограничить пребывание на улице.`,
+    insight_safe:        d=>`Безопасные условия подтверждены в ${d}. Все показатели в норме.`,
+    rec_high_both:       d=>`Развернуть экстренный контроль трафика и датчики качества воздуха в ${d}.`,
+    rec_high_traffic:    d=>`Активировать объездные маршруты и расширить общественный транспорт в ${d}.`,
+    rec_high_poll:       d=>`Выпустить предупреждение о качестве воздуха для ${d}. Рассмотреть временные ограничения.`,
+    rec_normal:          d=>`Поддерживать текущую политику управления в ${d}. Ситуация стабильная — продолжать мониторинг.`,
+    pop_format:n=>n>=1000000?`${(n/1e6).toFixed(1)}М`:n>=1000?`${Math.round(n/1000)}тыс`:`${n}`,
+    trend_up:'+',trend_dn:'-',
+  }
+};
+
+// STATE
+let S={city:'Astana',district:'Алматинский',lang:'en',data:{},tab:'dashboard'};
+let charts={};
+let mapObj=null,mapLayers=[];
+let rtTimer=null;
+let hourlyBase={};
+
+// AI MODEL
+function aiModel(city,district){
+  const b=DATA[city].districts[district];
+  const n=()=>(Math.random()-0.5)*8;
+  const traffic=Math.max(0,Math.min(100,b.traffic+n()));
+  const pollution=Math.max(0,Math.min(200,b.pollution+n()*2));
+  const safety=Math.max(0,Math.min(100,100-(traffic*0.5+pollution*0.3)));
+  const pop=b.pop+Math.floor((Math.random()-0.5)*400);
+  return{traffic,pollution,safety,pop};
+}
+
+function initHourlyBase(){
+  Object.keys(DATA).forEach(city=>{
+    Object.keys(DATA[city].districts).forEach(dist=>{
+      const k=city+'||'+dist;
+      if(!hourlyBase[k]){
+        const d=aiModel(city,dist);
+        hourlyBase[k]={traffic:d.traffic,pollution:d.pollution,safety:d.safety,ts:Date.now()};
+      }
+    });
+  });
+}
+
+function maybeRefreshBase(){
+  const now=Date.now();
+  Object.keys(hourlyBase).forEach(k=>{
+    if(now-hourlyBase[k].ts>60000){
+      const[city,dist]=k.split('||');
+      if(DATA[city]&&DATA[city].districts[dist]){
+        const d=aiModel(city,dist);
+        hourlyBase[k]={traffic:d.traffic,pollution:d.pollution,safety:d.safety,ts:now};
+      }
+    }
+  });
+}
+
+function hourlyChange(city,district,current){
+  const k=city+'||'+district;
+  const b=hourlyBase[k];
+  if(!b)return{traffic:0,pollution:0,safety:0};
+  return{
+    traffic: ((current.traffic -b.traffic) /Math.max(1,b.traffic) *100),
+    pollution:((current.pollution-b.pollution)/Math.max(1,b.pollution)*100),
+    safety:  ((current.safety  -b.safety)  /Math.max(1,b.safety)  *100),
+  };
+}
+
+function fmtDelta(pct,invert){
+  const v=Math.round(Math.abs(pct));
+  if(v<1)return{text:'±0%',cls:'neu'};
+  const up=pct>0;
+  // invert=true means up is good (e.g. safety)
+  return{text:(up?'+':'-')+v+'%', cls:invert?(up?'dn':'up'):(up?'up':'dn')};
+}
+
+function distColor(d){
+  if(d.safety>=65)return'#b8ff00';
+  if(d.safety>=40)return'#ff9500';
+  return'#ff4055';
+}
+function safeClass(s){return s>=65?'good':s>=40?'mid':'bad';}
+function mapClass(v,type){
+  if(type==='t')return v>=75?'r':v>=50?'o':'g';
+  if(type==='p')return v>=150?'r':v>=90?'o':'g';
+  if(type==='s')return v>=65?'g':v>=40?'o':'r';
+}
+
+// SUPPORT MODAL
+function openSupportModal(){
+  const t=T[S.lang];
+  document.getElementById('sup-title').textContent=t.sup_title;
+  document.getElementById('sup-desc').textContent=t.sup_desc;
+  document.getElementById('sup-note').textContent=t.sup_note;
+  document.getElementById('support-modal').classList.add('open');
+}
+function closeSupportModal(){document.getElementById('support-modal').classList.remove('open');}
+document.getElementById('support-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeSupportModal();});
+
+// MOBILE SIDEBAR
+function toggleSidebar(){
+  const s=document.getElementById('sidebar');
+  const o=document.getElementById('sidebar-overlay');
+  s.classList.toggle('open');
+  o.classList.toggle('active');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('active');
+}
+
+// TRANSLATE
+function applyLang(){
+  const t=T[S.lang];
+  document.querySelectorAll('[data-i]').forEach(el=>{
+    const k=el.getAttribute('data-i');
+    if(t[k]!==undefined&&typeof t[k]==='string')el.textContent=t[k];
+  });
+  document.getElementById('logo-sub').textContent=t.logo_sub;
+  document.querySelectorAll('.lang-btn').forEach((b,i)=>{
+    b.classList.toggle('active',['en','kk','ru'][i]===S.lang);
+  });
+  buildSidebar();renderDistrictList();buildMapDistList();
+}
+function setLang(l){S.lang=l;applyLang();fullUpdate();}
+
+// SIDEBAR
+function buildSidebar(){
+  const cl=document.getElementById('city-list');
+  cl.innerHTML='';
+  Object.keys(DATA).forEach(city=>{
+    const d=DATA[city];
+    const el=document.createElement('div');
+    el.className='city-item'+(city===S.city?' active':'');
+    el.innerHTML=`<div class="city-dot" style="background:${d.color}"></div><span>${city}</span><span class="city-count">${Object.keys(d.districts).length}</span>`;
+    el.onclick=()=>{S.city=city;S.district=Object.keys(DATA[city].districts)[0];closeSidebar();buildSidebar();renderDistrictList();buildMapDistList();fullUpdate();};
+    cl.appendChild(el);
+  });
+  renderDistrictList();
+}
+
+function renderDistrictList(){
+  const dl=document.getElementById('district-list');
+  dl.innerHTML='';
+  Object.entries(DATA[S.city].districts).forEach(([name])=>{
+    const dm=aiModel(S.city,name);
+    const sc=Math.round(dm.safety);
+    const el=document.createElement('div');
+    el.className='dist-item'+(name===S.district?' active':'');
+    el.innerHTML=`<span style="flex:1;font-size:11px">${name}</span><span class="dist-score ${safeClass(sc)}">${sc}</span>`;
+    el.onclick=()=>{S.district=name;closeSidebar();renderDistrictList();buildMapDistList();fullUpdate();};
+    dl.appendChild(el);
+  });
+}
+
+// UPDATE UI
+function applyDelta(valId,deltaId,pct,invert){
+  const el=document.getElementById(deltaId);
+  if(!el)return;
+  const f=fmtDelta(pct,invert);
+  el.textContent=f.text;
+  el.className='mcard-delta '+f.cls;
+}
+function applyHeroChange(id,pct,invert){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const f=fmtDelta(pct,invert);
+  el.textContent=f.text+' '+T[S.lang].vs_hour;
+  el.className='hero-change '+f.cls;
+}
+function applyMapChange(id,pct,invert){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const f=fmtDelta(pct,invert);
+  el.textContent=f.text+' '+T[S.lang].vs_hour;
+  el.className='map-metric-change '+f.cls;
+}
+
+function updateUI(d){
+  const t=T[S.lang];const r=v=>Math.round(v);
+  const ch=hourlyChange(S.city,S.district,d);
+
+  document.getElementById('hero-name').textContent=S.district;
+  document.getElementById('hero-city').textContent=S.city+' · Kazakhstan';
+  document.getElementById('hero-safety').textContent=r(d.safety);
+  document.getElementById('hero-traffic').textContent=r(d.traffic);
+  document.getElementById('hero-pollution').textContent=r(d.pollution);
+  applyHeroChange('hero-safety-ch',ch.safety,true);
+  applyHeroChange('hero-traffic-ch',ch.traffic,false);
+  applyHeroChange('hero-pollution-ch',ch.pollution,false);
+
+  document.getElementById('mv-traffic').textContent=r(d.traffic);
+  document.getElementById('mb-traffic').style.width=r(d.traffic)+'%';
+  document.getElementById('ms-traffic').textContent=d.traffic>=75?t.sev_high:d.traffic>=50?t.sev_med:t.sev_low;
+  applyDelta('mv-traffic','md-traffic',ch.traffic,false);
+
+  document.getElementById('mv-pollution').textContent=r(d.pollution);
+  document.getElementById('mb-pollution').style.width=(d.pollution/200*100)+'%';
+  document.getElementById('ms-pollution').textContent=d.pollution>=150?t.sev_high:d.pollution>=90?t.sev_med:t.sev_low;
+  applyDelta('mv-pollution','md-pollution',ch.pollution,false);
+
+  document.getElementById('mv-safety').textContent=r(d.safety);
+  document.getElementById('mb-safety').style.width=r(d.safety)+'%';
+  document.getElementById('ms-safety').textContent=d.safety>=65?t.sev_low:d.safety>=40?t.sev_med:t.sev_high;
+  applyDelta('mv-safety','md-safety',ch.safety,true);
+
+  document.getElementById('mv-pop').textContent=t.pop_format(d.pop);
+  document.getElementById('mb-pop').style.width=Math.min(100,d.pop/5000)+'%';
+  document.getElementById('ms-pop').textContent=t.pop_format(d.pop);
+
+  const ins=[];
+  if(d.traffic>=75)     ins.push({sev:'high',icon:'🔴',text:t.insight_high_traffic(S.district)});
+  else if(d.traffic>=50)ins.push({sev:'med',icon:'🟠',text:t.insight_med_traffic(S.district)});
+  else                  ins.push({sev:'low',icon:'🟢',text:t.insight_low_traffic(S.district)});
+  if(d.pollution>=150)  ins.push({sev:'high',icon:'🔴',text:t.insight_high_poll(S.district)});
+  else if(d.pollution>=90)ins.push({sev:'med',icon:'🟠',text:t.insight_med_poll(S.district)});
+  else                  ins.push({sev:'low',icon:'🟢',text:t.insight_safe(S.district)});
+  document.getElementById('ai-insights').innerHTML=ins.map(i=>`<div class="insight-row sev-${i.sev}"><span class="sev-icon">${i.icon}</span><span>${i.text}</span></div>`).join('');
+
+  let rec;
+  if(d.traffic>=75&&d.pollution>=120)rec=t.rec_high_both(S.district);
+  else if(d.traffic>=75)rec=t.rec_high_traffic(S.district);
+  else if(d.pollution>=120)rec=t.rec_high_poll(S.district);
+  else rec=t.rec_normal(S.district);
+  document.getElementById('ai-rec-text').textContent=rec;
+  document.querySelector('#ai-rec strong').textContent=t.recommendation;
+
+  document.getElementById('an-t').textContent=r(d.traffic);
+  document.getElementById('an-p').textContent=r(d.pollution);
+  document.getElementById('an-s').textContent=r(d.safety);
+  document.getElementById('an-pop').textContent=t.pop_format(d.pop);
+  document.getElementById('dash-district-pill').textContent=S.district;
+  document.getElementById('an-city-pill').textContent=S.city;
+
+  document.getElementById('mm-t').textContent=r(d.traffic);
+  document.getElementById('mm-t').className='map-metric-val '+mapClass(d.traffic,'t');
+  document.getElementById('mm-p').textContent=r(d.pollution);
+  document.getElementById('mm-p').className='map-metric-val '+mapClass(d.pollution,'p');
+  document.getElementById('mm-s').textContent=r(d.safety);
+  document.getElementById('mm-s').className='map-metric-val '+mapClass(d.safety,'s');
+  applyMapChange('mm-tc',ch.traffic,false);
+  applyMapChange('mm-pc',ch.pollution,false);
+  applyMapChange('mm-sc',ch.safety,true);
+
+  document.getElementById('upd-time').textContent=new Date().toLocaleTimeString();
+
+  document.querySelectorAll('.mcard').forEach(c=>{c.classList.add('flash');setTimeout(()=>c.classList.remove('flash'),650);});
+}
+
+// CHARTS
+Chart.defaults.color='#3d5060';
+Chart.defaults.borderColor='rgba(255,255,255,0.05)';
+Chart.defaults.font.family="'Space Grotesk',sans-serif";
+Chart.defaults.font.size=10;
+
+function mkChart(id,cfg){
+  if(charts[id])charts[id].destroy();
+  const el=document.getElementById(id);if(!el)return;
+  charts[id]=new Chart(el,cfg);
+}
+
+function updateCharts(d){
+  const t=T[S.lang];const r=v=>Math.round(v);
+  const distNames=Object.keys(DATA[S.city].districts);
+  const distData=distNames.map(n=>aiModel(S.city,n));
+  mkChart('d-bar',{type:'bar',data:{
+    labels:[t.traffic,t.pollution,t.safety],
+    datasets:[{data:[r(d.traffic),r(d.pollution/2),r(d.safety)],backgroundColor:['rgba(255,149,0,0.85)','rgba(139,92,246,0.85)','rgba(184,255,0,0.85)'],borderRadius:6,borderSkipped:false}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#3d5060'}}}}});
+
+  mkChart('d-donut',{type:'doughnut',data:{
+    labels:[t.traffic,t.pollution,t.safety],
+    datasets:[{data:[r(d.traffic),r(d.pollution/2),r(d.safety)],backgroundColor:['rgba(255,149,0,0.9)','rgba(139,92,246,0.9)','rgba(184,255,0,0.9)'],borderWidth:0,hoverOffset:6}]
+  },options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'right',labels:{boxWidth:9,padding:9,color:'#8da0b0'}}}}});
+
+  mkChart('an-bar',{type:'bar',data:{
+    labels:distNames,
+    datasets:[
+      {label:t.traffic,data:distData.map(x=>r(x.traffic)),backgroundColor:'rgba(255,149,0,0.8)',borderRadius:4},
+      {label:t.pollution,data:distData.map(x=>r(x.pollution/2)),backgroundColor:'rgba(139,92,246,0.8)',borderRadius:4},
+      {label:t.safety,data:distData.map(x=>r(x.safety)),backgroundColor:'rgba(184,255,0,0.8)',borderRadius:4},
+    ]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:9,color:'#8da0b0'}}},scales:{y:{beginAtZero:true,max:100,grid:{color:'rgba(255,255,255,0.04)'}},x:{grid:{display:false},ticks:{color:'#3d5060',maxRotation:28}}}}});
+
+  const hrs=Array.from({length:24},(_,i)=>i+':00');
+  const lt=hrs.map((_,i)=>Math.max(0,Math.min(100,d.traffic+Math.sin(i/3)*15+(Math.random()-0.5)*8)));
+  const lp=hrs.map((_,i)=>Math.max(0,Math.min(200,d.pollution+Math.cos(i/4)*20+(Math.random()-0.5)*10)));
+  mkChart('an-line',{type:'line',data:{
+    labels:hrs,
+    datasets:[
+      {label:t.traffic,data:lt.map(r),borderColor:'#ff9500',backgroundColor:'rgba(255,149,0,0.06)',borderWidth:1.5,fill:true,tension:0.4,pointRadius:0},
+      {label:t.pollution+'/2',data:lp.map(x=>r(x/2)),borderColor:'#8b5cf6',backgroundColor:'rgba(139,92,246,0.06)',borderWidth:1.5,fill:true,tension:0.4,pointRadius:0},
+    ]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top',labels:{boxWidth:9,color:'#8da0b0'}}},scales:{y:{beginAtZero:true,grid:{color:'rgba(255,255,255,0.04)'}},x:{grid:{display:false},ticks:{color:'#3d5060',maxTicksLimit:8}}}}});
+
+  mkChart('an-radar',{type:'radar',data:{
+    labels:[t.traffic,t.pollution,t.safety,'Pop','Risk'],
+    datasets:[{label:S.district,data:[r(d.traffic),r(d.pollution/2),r(d.safety),r(Math.min(100,d.pop/4500)),r(100-d.safety)],backgroundColor:'rgba(184,255,0,0.07)',borderColor:'rgba(184,255,0,0.55)',borderWidth:1.5,pointBackgroundColor:'#b8ff00',pointRadius:3}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{beginAtZero:true,max:100,grid:{color:'rgba(255,255,255,0.07)'},ticks:{display:false},pointLabels:{color:'#8da0b0',font:{size:9}}}}}});
+}
+
+// MAP — Polygon borders (sharper outlines)
+const POLY_SHAPE=[
+  [0.020,0.000],[0.014,0.014],[0.000,0.020],[-0.014,0.014],
+  [-0.020,0.000],[-0.014,-0.014],[0.000,-0.020],[0.014,-0.014]
+];
+
+function makePolyPts(lat,lng,scale){
+  return POLY_SHAPE.map(([dy,dx])=>[lat+dy*scale,lng+dx*scale]);
+}
+
+function buildMapDistList(){
+  const el=document.getElementById('map-dist-list');if(!el)return;
+  el.innerHTML='';
+  Object.entries(DATA[S.city].districts).forEach(([name,dd])=>{
+    const dm=aiModel(S.city,name);
+    const col=distColor(dm);const sc=Math.round(dm.safety);
+    const div=document.createElement('div');
+    div.className='map-dist-item'+(name===S.district?' active':'');
+    div.innerHTML=`<div class="map-dist-dot" style="background:${col}"></div><span class="map-dist-name">${name}</span><span class="map-dist-safe" style="color:${col}">${sc}</span>`;
+    div.onclick=()=>{S.district=name;renderDistrictList();buildMapDistList();fullUpdate();};
+    el.appendChild(div);
+  });
+}
+
+function updateMap(d){
+  if(!mapObj)return;
+  const city=DATA[S.city];
+  const dist=city.districts[S.district];
+  mapLayers.forEach(l=>mapObj.removeLayer(l));
+  mapLayers=[];
+  mapObj.setView([dist.lat,dist.lng],city.zoom,{animate:true,duration:0.8});
+
+  Object.entries(city.districts).forEach(([name,dd])=>{
+    const dm=aiModel(S.city,name);
+    const col=distColor(dm);
+    const isSel=name===S.district;
+    const scale=0.8;
+
+    // Polygon outline
+    const pts=makePolyPts(dd.lat,dd.lng,scale);
+    const poly=L.polygon(pts,{
+      color:col,weight:isSel?3:1.5,opacity:isSel?0.95:0.55,
+      fillColor:col,fillOpacity:isSel?0.2:0.07,
+      dashArray:isSel?null:'5,4'
+    });
+    poly.bindTooltip(`<b>${name}</b>`,{className:'dist-tooltip',sticky:false,direction:'top'});
+    poly.on('click',()=>{S.district=name;renderDistrictList();buildMapDistList();fullUpdate();});
+    poly.addTo(mapObj);
+    mapLayers.push(poly);
+
+    // Center dot
+    const icon=L.divIcon({
+      className:'',
+      html:`<div style="width:${isSel?12:6}px;height:${isSel?12:6}px;border-radius:50%;background:${col};border:${isSel?'2px':'1px'} solid rgba(255,255,255,0.85);box-shadow:0 0 ${isSel?14:4}px ${col}${isSel?'cc':'55'}"></div>`,
+      iconSize:[isSel?12:6,isSel?12:6],iconAnchor:[isSel?6:3,isSel?6:3]
+    });
+    const m=L.marker([dd.lat,dd.lng],{icon}).addTo(mapObj);
+    if(isSel){
+      const t=T[S.lang];
+      m.bindPopup(`<b>${name}</b><br>${t.safety}: ${Math.round(dm.safety)}<br>${t.traffic}: ${Math.round(dm.traffic)}<br>${t.pollution}: ${Math.round(dm.pollution)}`).openPopup();
+    }
+    mapLayers.push(m);
+  });
+}
+
+// FULL UPDATE
+function fullUpdate(){
+  maybeRefreshBase();
+  const d=aiModel(S.city,S.district);
+  S.data=d;updateUI(d);updateCharts(d);
+  if(S.tab==='map')updateMap(d);
+}
+
+function startRT(){
+  if(rtTimer)clearInterval(rtTimer);
+  rtTimer=setInterval(()=>{
+    maybeRefreshBase();
+    const d=aiModel(S.city,S.district);
+    S.data=d;updateUI(d);renderDistrictList();
+  },4000);
+}
+
+// TABS
+function switchTab(tab){
+  S.tab=tab;
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-pill').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  document.getElementById('tab-'+tab).classList.add('active');
+  if(tab==='map'){setTimeout(()=>{if(mapObj)mapObj.invalidateSize();updateMap(S.data);buildMapDistList();},100);}
+  if(tab==='analytics'||tab==='dashboard')updateCharts(S.data);
+}
+
+// INIT
+function init(){
+  initHourlyBase();
+  applyLang();buildSidebar();buildMapDistList();
+  mapObj=L.map('map',{zoomControl:true,scrollWheelZoom:true});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:18}).addTo(mapObj);
+  mapObj.setView(DATA[S.city].center,DATA[S.city].zoom);
+  fullUpdate();startRT();
+}
+window.addEventListener('load',init);
+</script>
+</body>
+</html>
